@@ -1,7 +1,9 @@
 // void spec_read(void *probe_buf, void *miss_buf, int bit);
 .global spec_read
-.func
+.global _spec_read
+.align 8
 spec_read:
+_spec_read:
   LDR X1, [X1]
   LDR X1, [X1]
   LDR X1, [X1]
@@ -14,4 +16,3 @@ spec_read:
   LDR X0, [X0]
 
   RET
-.endfunc

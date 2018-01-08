@@ -42,6 +42,10 @@
 #include <string.h>
 #include <stdbool.h>
 
+#if __APPLE__
+#include <libkern/OSCacheControl.h>
+#endif
+
 typedef struct {
   uint32_t op0;
   uint32_t op1;
@@ -108,8 +112,10 @@ void get_value(int i, siginfo_t *info, void *ctx) {
     }
   }
 
+#if !__APPLE__
   ucontext_t *c = (ucontext_t *)ctx;
   c->uc_mcontext.pc += 24;
+#endif
 }
 
 uint32_t get_mrs(uint64_t op0, uint64_t op1, uint64_t crn, uint64_t crm, uint64_t op2) {
@@ -134,7 +140,11 @@ int read_register(uint64_t *val, uint32_t op0, uint32_t op1, uint32_t crn, uint3
   memcpy(codebuf, spec_read, CODE_SIZE);
   assert(codebuf[5] == 0xd503201f);
   codebuf[5] = get_mrs(op0, op1, crn, crm, op2);
+#if __APPLE__
+  sys_icache_invalidate (codebuf, CODE_SIZE + 1);
+#else
   __clear_cache(codebuf, codebuf + CODE_SIZE + 1);
+#endif
   
   int timeout = 20000;
 
@@ -174,7 +184,7 @@ void read_registers() {
     uint64_t val;
     int ret = read_register(&val, sysregs[i].op0, sysregs[i].op1, sysregs[i].crn,
                                    sysregs[i].crm, sysregs[i].op2);
-    printf("%-20s: 0x%lx %s\n", sysregs[i].name, val, (ret == 0) ? "" : "(dynamic?)");
+    printf("%-20s: 0x%llx %s\n", sysregs[i].name, val, (ret == 0) ? "" : "(dynamic?)");
   }
 }
 
